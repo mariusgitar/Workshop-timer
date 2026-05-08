@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workshop Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: #0e0e0e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+  .wordmark {
+    font-size: 10px;
+    letter-spacing: 0.35em;
+    color: #252525;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+  }
+  #ring-wrap {
+    position: relative;
+    width: 320px;
+    height: 320px;
+  }
+  #ring-wrap svg { display: block; pointer-events: none; }
+  #center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+  #time-display {
+    font-size: 54px;
+    font-weight: 300;
+    line-height: 1;
+    color: #e0e0e0;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.4s;
+  }
+  #hint {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: #2e2e2e;
+    text-transform: uppercase;
+  }
+  #controls {
+    margin-top: 40px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .btn {
+    background: transparent;
+    border: 1px solid #2a2a2a;
+    color: #555;
+    border-radius: 4px;
+    padding: 9px 24px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: #555; color: #aaa; }
+  .btn.primary { background: #fff; border-color: #fff; color: #0e0e0e; }
+  .btn.primary:hover { background: #ddd; }
+  #footer {
+    margin-top: 24px;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: #1e1e1e;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div class="wordmark">Workshop Timer</div>
+
+<div id="ring-wrap">
+  <svg id="svg" width="320" height="320">
+    <!-- track -->
+    <circle cx="160" cy="160" r="124" fill="none" stroke="#2d2d2d" stroke-width="72"/>
+    <!-- arc -->
+    <path id="arc" fill="none" stroke="#ffffff" stroke-width="72" stroke-linecap="butt"/>
+    <!-- inner mask -->
+    <circle cx="160" cy="160" r="87" fill="#0e0e0e"/>
+    <!-- drag handle -->
+    <circle id="handle" cx="160" cy="36" r="10" fill="#0e0e0e" stroke="#fff" stroke-width="2.5"/>
+    <!-- 12-notch -->
+    <rect x="158.5" y="-1" width="3" height="74" fill="#0e0e0e"/>
+  </svg>
+  <div id="center">
+    <div id="time-display">05:00</div>
+    <div id="hint">trykk for start</div>
+  </div>
+</div>
+
+<div id="controls">
+  <button class="btn primary" id="btn-main">Start</button>
+</div>
+<div id="footer">dra ringen &middot; 1&ndash;59 min</div>
+
+<script>
+const MAX_MIN = 59;
+const R = 124, CX = 160, CY = 160;
+
+// --- State ---
+let mode = 'set';       // 'set' | 'run'
+let setMins = 5;
+let total = 300;
+let remaining = 300;
+let running = false;
+let finished = false;
+let ticker = null;
+let dragging = false;
+
+// --- Slug parsing ---
+function parseSlug() {
+  const parts = location.pathname.replace(/^\/+/, '').split('/');
+  const nums = parts.filter(p => /^\d+$/.test(p));
+  const minutes = nums.length ? Math.max(1, Math.min(MAX_MIN, parseInt(nums[0]))) : null;
+  const auto = parts.includes('auto');
+  return { minutes, auto };
+}
+
+// --- DOM refs ---
+const arcEl = document.getElementById('arc');
+const handleEl = document.getElementById('handle');
+const timeEl = document.getElementById('time-display');
+const hintEl = document.getElementById('hint');
+const btnMain = document.getElementById('btn-main');
+const controls = document.getElementById('controls');
+const footer = document.getElementById('footer');
+const ringWrap = document.getElementById('ring-wrap');
+
+// --- Helpers ---
+function pad(n) { return String(n).padStart(2, '0'); }
+function fmt(s) { return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
+
+function arcPath(frac) {
+  if (frac <= 0) return '';
+  const f = Math.min(frac, 0.9999);
+  const a = f * 2 * Math.PI;
+  const ex = CX + R * Math.sin(a);
+  const ey = CY - R * Math.cos(a);
+  return 'M ' + CX + ' ' + (CY - R) + ' A ' + R + ' ' + R + ' 0 ' + (f > 0.5 ? 1 : 0) + ' 1 ' + ex + ' ' + ey;
+}
+
+function arcColor(frac, fin) {
+  if (fin) return '#ef4444';
+  if (frac > 0.5) return '#ffffff';
+  if (frac > 0.2) return '#f59e0b';
+  return '#ef4444';
+}
+
+function handlePos(frac) {
+  const a = frac * 2 * Math.PI;
+  return { x: CX + R * Math.sin(a), y: CY - R * Math.cos(a) };
+}
+
+// --- Render ---
+function render() {
+  const frac = mode === 'set' ? setMins / MAX_MIN : (total > 0 ? remaining / total : 0);
+
+  // Arc
+  arcEl.setAttribute('d', arcPath(frac));
+  arcEl.setAttribute('stroke', mode === 'set' ? '#ffffff' : arcColor(frac, finished));
+  arcEl.setAttribute('opacity', finished ? '0.3' : '1');
+
+  // Handle
+  if (mode === 'set') {
+    handleEl.style.display = '';
+    const p = handlePos(setMins / MAX_MIN);
+    handleEl.setAttribute('cx', p.x);
+    handleEl.setAttribute('cy', p.y);
+  } else {
+    handleEl.style.display = 'none';
+  }
+
+  // Time
+  timeEl.textContent = mode === 'set' ? pad(setMins) + ':00' : fmt(remaining);
+  timeEl.style.color = finished ? '#ef4444' : '#e0e0e0';
+
+  // Hint
+  if (mode === 'set') {
+    hintEl.textContent = 'trykk for start';
+  } else if (finished) {
+    hintEl.textContent = '—';
+  } else {
+    hintEl.textContent = running ? 'trykk for pause' : 'pauset';
+  }
+
+  // Pulse
+  const urgent = mode === 'run' && frac <= 0.1 && frac > 0 && running;
+  ringWrap.style.animation = urgent ? 'pulse 1s ease-in-out infinite' : '';
+
+  // Cursor
+  ringWrap.style.cursor = mode === 'set' ? 'crosshair' : 'default';
+
+  // Controls
+  if (mode === 'set') {
+    controls.innerHTML = '<button class="btn primary" id="btn-main">Start</button>';
+    document.getElementById('btn-main').onclick = startTimer;
+    footer.textContent = 'dra ringen \u00b7 1\u201359 min';
+  } else if (finished) {
+    controls.innerHTML = '<button class="btn primary" id="btn-main">Ny runde</button>';
+    document.getElementById('btn-main').onclick = backToSet;
+    footer.textContent = 'tid ute';
+  } else {
+    controls.innerHTML =
+      '<button class="btn" id="btn-back">\u2190 Endre tid</button>' +
+      '<button class="btn primary" id="btn-main">' + (running ? 'Pause' : 'Fortsett') + '</button>';
+    document.getElementById('btn-back').onclick = backToSet;
+    document.getElementById('btn-main').onclick = togglePause;
+    footer.textContent = '';
+  }
+}
+
+// --- Actions ---
+function startTimer() {
+  total = setMins * 60;
+  remaining = total;
+  finished = false;
+  mode = 'run';
+  running = true;
+  startTick();
+  render();
+}
+
+function togglePause() {
+  if (finished) return;
+  running = !running;
+  if (running) startTick(); else stopTick();
+  render();
+}
+
+function backToSet() {
+  stopTick();
+  running = false;
+  finished = false;
+  mode = 'set';
+  render();
+}
+
+function startTick() {
+  stopTick();
+  ticker = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      remaining = 0;
+      stopTick();
+      running = false;
+      finished = true;
+      playDone();
+    }
+    render();
+  }, 1000);
+}
+
+function stopTick() {
+  if (ticker) { clearInterval(ticker); ticker = null; }
+}
+
+// --- Audio ---
+function playDone() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
+      const t = ctx.currentTime + i * 0.2;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.22, t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+      osc.start(t); osc.stop(t + 0.6);
+    });
+  } catch(e) {}
+}
+
+// --- Drag ---
+function getAngle(e) {
+  const rect = ringWrap.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return Math.atan2(clientX - cx, -(clientY - cy));
+}
+
+function isOnRing(e) {
+  const rect = ringWrap.getBoundingClientRect();
+  const scale = rect.width / 320;
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const dist = Math.sqrt((clientX - cx) ** 2 + (clientY - cy) ** 2);
+  return dist >= (R - 36) * scale && dist <= (R + 36) * scale;
+}
+
+function angleToMins(angle) {
+  let deg = angle * 180 / Math.PI;
+  if (deg < 0) deg += 360;
+  return Math.max(1, Math.min(MAX_MIN, Math.round(deg / 360 * MAX_MIN)));
+}
+
+ringWrap.addEventListener('pointerdown', e => {
+  if (mode !== 'set' || !isOnRing(e)) return;
+  dragging = true;
+  setMins = angleToMins(getAngle(e));
+  render();
+  e.preventDefault();
+});
+ringWrap.addEventListener('touchstart', e => {
+  if (mode !== 'set' || !isOnRing(e)) return;
+  dragging = true;
+  setMins = angleToMins(getAngle(e));
+  render();
+  e.preventDefault();
+}, { passive: false });
+
+window.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  setMins = angleToMins(getAngle(e));
+  render();
+});
+window.addEventListener('touchmove', e => {
+  if (!dragging) return;
+  setMins = angleToMins(getAngle(e));
+  render();
+  e.preventDefault();
+}, { passive: false });
+
+window.addEventListener('pointerup', () => { dragging = false; });
+window.addEventListener('touchend', () => { dragging = false; });
+
+// Center tap
+document.getElementById('center').addEventListener('click', () => {
+  if (mode === 'set') startTimer();
+  else togglePause();
+});
+
+// --- Init from slug ---
+const slug = parseSlug();
+if (slug.minutes) {
+  setMins = slug.minutes;
+  total = setMins * 60;
+  remaining = total;
+  if (slug.auto) {
+    mode = 'run';
+    running = true;
+    startTick();
+  }
+}
+
+render();
+</script>
+
+</body>
+</html>
