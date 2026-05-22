@@ -19,12 +19,18 @@ export async function POST(req: Request) {
     cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER
   });
 
-  await pusher.trigger(`room-${roomId}`, 'timer-update', {
-    remaining,
-    total,
-    running,
-    finished
-  });
+  try {
+    await pusher.trigger(`room-${roomId}`, 'timer-update', {
+      remaining,
+      total,
+      running,
+      finished
+    });
+    console.log('Pusher trigger success for room:', roomId);
+  } catch (error) {
+    console.error('Pusher trigger error:', error);
+    return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }
