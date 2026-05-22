@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 
 type Mode = 'set' | 'run';
 
@@ -49,6 +50,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   const [running, setRunning] = useState(autoStart);
   const [finished, setFinished] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [roomId, setRoomId] = useState<string | null>(null);
 
   const ringRef = useRef<HTMLDivElement>(null);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -202,6 +204,35 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
     setMode('set');
   };
 
+
+
+  useEffect(() => {
+    if (!running || !roomId) return;
+
+    const sync = () => {
+      void fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, remaining, total, running, finished })
+      });
+    };
+
+    sync();
+    const interval = setInterval(sync, 1000);
+    return () => clearInterval(interval);
+  }, [finished, remaining, roomId, running, total]);
+
+  const shareUrl = useMemo(() => {
+    if (!roomId || typeof window === 'undefined') return '';
+    return `${window.location.origin}/room/${roomId}`;
+  }, [roomId]);
+
+  const createRoomId = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const id = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    setRoomId(id);
+  };
+
   const frac = useMemo(() => (mode === 'set' ? setMins / MAX_MIN : total > 0 ? remaining / total : 0), [mode, remaining, setMins, total]);
   const urgent = mode === 'run' && frac <= 0.1 && frac > 0 && running;
 
@@ -262,10 +293,18 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         ) : (
           <>
             <button className="btn ghost" onClick={backToSet}>← Endre tid</button>
+            <button className="btn ghost" onClick={createRoomId}>Del timer</button>
             <button className="btn primary" onClick={togglePause}>{running ? 'Pause' : 'Fortsett'}</button>
           </>
         )}
       </div>
+
+      {mode === 'run' && roomId && (
+        <div id="share-box">
+          <div>Rom: <strong>{roomId}</strong></div>
+          {shareUrl && <QRCodeSVG value={shareUrl} size={140} bgColor="#111111" fgColor="#FFFFFF" />}
+        </div>
+      )}
 
       <div id="footer">{mode === 'set' ? '1 – 59 min' : ''}</div>
 
@@ -282,6 +321,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         .btn.primary:hover { background: #E8E8E8; }
         .btn.ghost { background: transparent; color: #555555; border: 1px solid #2A2A2A; }
         .btn.ghost:hover { border-color: #555555; color: #AAAAAA; }
+        #share-box { margin-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: #AAAAAA; font-size: 13px; }
         #footer { margin-top: 20px; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: #2A2A2A; text-transform: uppercase; }
       `}</style>
     </>
