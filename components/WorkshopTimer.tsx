@@ -217,24 +217,28 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   };
 
 
+  // Immediate push on start, pause, resume, finish, or new timer total
   useEffect(() => {
     if (!roomId) return;
-    const interval = setInterval(() => {
-      if (!runningRef.current) return;
+    void fetch('/api/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, remaining: remainingRef.current, total, running, finished })
+    });
+  }, [roomId, running, finished, total]);
+
+  // Periodic push every second while running to keep remaining in sync
+  useEffect(() => {
+    if (!roomId || !running) return;
+    const id = setInterval(() => {
       void fetch('/api/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomId,
-          remaining: remainingRef.current,
-          total,
-          running: runningRef.current,
-          finished
-        })
+        body: JSON.stringify({ roomId, remaining: remainingRef.current, total, running: true, finished: false })
       });
     }, 1000);
-    return () => clearInterval(interval);
-  }, [roomId, total, finished]);
+    return () => clearInterval(id);
+  }, [roomId, running, total]);
 
   const shareUrl = useMemo(() => {
     if (!roomId || typeof window === 'undefined') return '';
