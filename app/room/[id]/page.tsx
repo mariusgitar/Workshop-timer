@@ -36,6 +36,8 @@ export default function RoomPage({ params }: RoomPageProps) {
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
   const wasFinishedRef = useRef(false);
+  const endsAt = useRef<number | null>(null);
+  const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY ?? '', {
@@ -48,6 +50,12 @@ export default function RoomPage({ params }: RoomPageProps) {
       setTotal(data.total);
       setRunning(data.running);
       setFinished(data.finished);
+
+      if (data.running) {
+        endsAt.current = Date.now() + data.remaining * 1000;
+      } else {
+        endsAt.current = null;
+      }
     });
 
     return () => {
@@ -56,6 +64,52 @@ export default function RoomPage({ params }: RoomPageProps) {
       pusher.disconnect();
     };
   }, [params.id]);
+
+
+
+  useEffect(() => {
+    if (tickIntervalRef.current) {
+      clearInterval(tickIntervalRef.current);
+      tickIntervalRef.current = null;
+    }
+
+    if (!running || finished || endsAt.current === null) {
+      return;
+    }
+
+    const tick = () => {
+      if (endsAt.current === null) return;
+      const next = Math.max(0, Math.round((endsAt.current - Date.now()) / 1000));
+      setRemaining(next);
+    };
+
+    tick();
+    tickIntervalRef.current = setInterval(tick, 250);
+
+    return () => {
+      if (tickIntervalRef.current) {
+        clearInterval(tickIntervalRef.current);
+        tickIntervalRef.current = null;
+      }
+    };
+  }, [running, finished]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible' || !running || finished || endsAt.current === null) {
+        return;
+      }
+
+      const next = Math.max(0, Math.round((endsAt.current - Date.now()) / 1000));
+      setRemaining(next);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [running, finished]);
 
   useEffect(() => {
     if (finished && !wasFinishedRef.current) {
