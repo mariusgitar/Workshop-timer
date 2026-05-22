@@ -56,6 +56,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const endsAtRef = useRef<number | null>(null);
   const runningRef = useRef(running);
+  const remainingRef = useRef(remaining);
 
   const stopTick = useCallback(() => {
     if (tickerRef.current) {
@@ -112,6 +113,10 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   useEffect(() => {
     runningRef.current = running;
   }, [running]);
+
+  useEffect(() => {
+    remainingRef.current = remaining;
+  }, [remaining]);
 
   useEffect(() => {
     if (autoStart) startTick(seededMinutes * 60);
@@ -208,20 +213,23 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
 
 
   useEffect(() => {
-    if (!running || !roomId) return;
-
-    const sync = () => {
+    if (!roomId) return;
+    const interval = setInterval(() => {
+      if (!runningRef.current) return;
       void fetch('/api/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, remaining, total, running, finished })
+        body: JSON.stringify({
+          roomId,
+          remaining: remainingRef.current,
+          total,
+          running: runningRef.current,
+          finished
+        })
       });
-    };
-
-    sync();
-    const interval = setInterval(sync, 1000);
+    }, 1000);
     return () => clearInterval(interval);
-  }, [finished, remaining, roomId, running, total]);
+  }, [roomId, total, finished]);
 
   const shareUrl = useMemo(() => {
     if (!roomId || typeof window === 'undefined') return '';
