@@ -183,7 +183,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
 
   const startTimer = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const id = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const id = roomId ?? Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const seconds = setMins * 60;
     setRoomId(id);
     setShowQR(false);
