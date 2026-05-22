@@ -142,36 +142,44 @@ export default function RoomPage({ params }: RoomPageProps) {
 
   const frac = useMemo(() => (total > 0 ? remaining / total : 0), [remaining, total]);
   const isWaiting = total === 0 && remaining === 0;
-  const urgent = isWaiting || (frac <= 0.1 && frac > 0 && running);
+  const urgent = frac <= 0.1 && frac > 0 && running;
 
   return (
     <>
       <div className="eyebrow">Workshop timer</div>
-      <div id="ring-wrap" style={{ animation: urgent ? 'pulse 1s ease-in-out infinite' : '' }}>
-        <svg id="svg" width="300" height="300">
-          <circle cx="150" cy="150" r="116" fill="none" stroke="#1E1E1E" strokeWidth="68" />
-          <path id="arc" fill="none" strokeWidth="68" strokeLinecap="butt" d={arcPath(isWaiting ? 1 : frac)} stroke={isWaiting ? '#FFFFFF' : arcColor(frac, finished)} opacity={finished ? '0.25' : '1'} />
-          <circle cx="150" cy="150" r="92" fill="#111111" />
-          <rect x="148.5" y="-1" width="3" height="69" fill="#111111" />
-        </svg>
+      {isWaiting ? (
+        <div id="idle-state">
+          <div id="idle-text">Venter på timer...</div>
+        </div>
+      ) : (
+        <div id="ring-wrap" style={{ animation: urgent ? 'pulse 1s ease-in-out infinite' : '' }}>
+          <svg id="svg" width="300" height="300">
+            <circle cx="150" cy="150" r="116" fill="none" stroke="#1E1E1E" strokeWidth="68" />
+            <path id="arc" fill="none" strokeWidth="68" strokeLinecap="butt" d={arcPath(frac)} stroke={arcColor(frac, finished)} opacity={finished ? '0.25' : '1'} />
+            <circle cx="150" cy="150" r="92" fill="#111111" />
+            <rect x="148.5" y="-1" width="3" height="69" fill="#111111" />
+          </svg>
 
-        <div id="center">
-          <div id="time-display" style={{ color: finished ? '#dc2626' : '#FFFFFF', animation: finished ? 'flash 1s ease-in-out infinite' : '' }}>
-            {isWaiting ? 'Venter på timer...' : fmt(remaining)}
-          </div>
-          <div id="hint-pill" style={{ background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' }}>
-            {isWaiting ? 'Ingen aktiv timer' : finished ? 'Tid ute' : running ? 'Kjører' : 'Pauset'}
+          <div id="center">
+            <div id="time-display" style={{ color: finished ? '#dc2626' : '#FFFFFF', animation: finished ? 'flash 1s ease-in-out infinite' : '' }}>
+              {fmt(remaining)}
+            </div>
+            <div id="hint-pill" style={{ background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' }}>
+              {finished ? 'Tid ute' : running ? 'Kjører' : 'Pauset'}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <style jsx>{`
         .eyebrow { font-size: 22px; font-weight: 700; letter-spacing: 0em; text-transform: none; color: #FFFFFF; margin-bottom: 48px; }
-        #ring-wrap { position: relative; width: 300px; height: 300px; }
+        #ring-wrap, #idle-state { position: relative; width: 300px; height: 300px; }
         #ring-wrap svg { display: block; pointer-events: none; }
         #center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: default; }
         #time-display { font-size: 58px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color 0.4s; text-align: center; padding: 0 12px; }
         #hint-pill { display: inline-flex; align-items: center; background: #1E1E1E; border: 1px solid #2A2A2A; border-radius: 100px; padding: 5px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; transition: all 0.2s; }
+        #idle-state { display: flex; align-items: center; justify-content: center; }
+        #idle-text { font-size: 16px; color: #555555; text-align: center; }
       `}</style>
     </>
   );

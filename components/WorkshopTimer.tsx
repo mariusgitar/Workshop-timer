@@ -275,6 +275,14 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
     setFinished(false);
     setShowQR(false);
     setMode('set');
+
+    if (roomId) {
+      void fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, remaining: 0, total: 0, running: false, finished: false })
+      });
+    }
   };
 
   useEffect(() => {
