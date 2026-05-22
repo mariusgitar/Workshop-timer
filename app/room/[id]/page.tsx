@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Pusher from 'pusher-js';
 
+Pusher.logToConsole = true;
+
 type RoomPageProps = {
   params: { id: string };
 };
@@ -40,6 +42,8 @@ export default function RoomPage({ params }: RoomPageProps) {
   const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    console.log('Pusher key:', process.env.NEXT_PUBLIC_PUSHER_KEY);
+    console.log('Pusher cluster:', process.env.NEXT_PUBLIC_PUSHER_CLUSTER);
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY ?? '', {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? ''
     });
