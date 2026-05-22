@@ -8,12 +8,16 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'Workshop Timer'
+  title: 'Workshop Timer',
+  manifest: '/manifest.json'
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="no">
+      <head>
+        <meta name="theme-color" content="#111111" />
+      </head>
       <body className={plusJakartaSans.className}>{children}</body>
     </html>
   );
