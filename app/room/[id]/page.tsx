@@ -152,8 +152,8 @@ export default function RoomPage({ params }: RoomPageProps) {
   const urgent = frac <= 0.1 && frac > 0 && running;
 
   return (
-    <main>
-      <div className="eyebrow">Delt timer: {params.id}</div>
+    <>
+      <div className="eyebrow">Workshop timer</div>
       <div id="ring-wrap" style={{ animation: urgent ? 'pulse 1s ease-in-out infinite' : '' }}>
         <svg id="svg" width="300" height="300">
           <circle cx="150" cy="150" r="116" fill="none" stroke="#1E1E1E" strokeWidth="68" />
@@ -171,6 +171,15 @@ export default function RoomPage({ params }: RoomPageProps) {
           </div>
         </div>
       </div>
-    </main>
+
+      <style jsx>{`
+        .eyebrow { font-size: 22px; font-weight: 700; letter-spacing: 0em; text-transform: none; color: #FFFFFF; margin-bottom: 48px; }
+        #ring-wrap { position: relative; width: 300px; height: 300px; }
+        #ring-wrap svg { display: block; pointer-events: none; }
+        #center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: default; }
+        #time-display { font-size: 58px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color 0.4s; }
+        #hint-pill { display: inline-flex; align-items: center; background: #1E1E1E; border: 1px solid #2A2A2A; border-radius: 100px; padding: 5px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; transition: all 0.2s; }
+      `}</style>
+    </>
   );
 }
