@@ -49,21 +49,24 @@ export default function RoomPage({ params }: RoomPageProps) {
     });
 
     const channel = pusher.subscribe(`room-${params.id}`);
-    console.log('Subscribed, binding now...');
-    channel.bind('timer-update', (data: { remaining: number; total: number; running: boolean; finished: boolean }) => {
-      console.log('Received timer-update:', data);
-      setRemaining(data.remaining);
-      setTotal(data.total);
-      setRunning(data.running);
-      setFinished(data.finished);
+    console.log('Subscribed, waiting for subscription_success...');
+    channel.bind('pusher:subscription_succeeded', () => {
+      console.log('Subscription succeeded, binding timer-update');
+      channel.bind('timer-update', (data: { remaining: number; total: number; running: boolean; finished: boolean }) => {
+        console.log('Received timer-update:', data);
+        setRemaining(data.remaining);
+        setTotal(data.total);
+        setRunning(data.running);
+        setFinished(data.finished);
 
-      if (data.running) {
-        endsAt.current = Date.now() + data.remaining * 1000;
-      } else {
-        endsAt.current = null;
-      }
+        if (data.running) {
+          endsAt.current = Date.now() + data.remaining * 1000;
+        } else {
+          endsAt.current = null;
+        }
+      });
+      console.log('Bound timer-update successfully');
     });
-    console.log('Bound successfully');
 
     return () => {
       channel.unbind_all();
