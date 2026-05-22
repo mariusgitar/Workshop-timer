@@ -311,6 +311,16 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         <div id="share-box">
           <div>Rom: <strong>{roomId}</strong></div>
           {shareUrl && <QRCodeSVG value={shareUrl} size={140} bgColor="#111111" fgColor="#FFFFFF" />}
+          {shareUrl && (
+            <a
+              href={shareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#888888', fontSize: '12px', wordBreak: 'break-all', textAlign: 'center' }}
+            >
+              {shareUrl}
+            </a>
+          )}
         </div>
       )}
 
