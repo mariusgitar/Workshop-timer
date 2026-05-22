@@ -34,8 +34,8 @@ const arcColor = (frac: number, fin: boolean) => {
   return '#dc2626';
 };
 
-const angleToMins = (a: number) => {
-  let deg = (a * 180) / Math.PI;
+const angleToMins = (angle: number) => {
+  let deg = (angle * 180) / Math.PI;
   if (deg < 0) deg += 360;
   return Math.max(1, Math.min(MAX_MIN, Math.round((deg / 360) * MAX_MIN)));
 };
@@ -81,7 +81,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         osc.stop(t + 0.6);
       });
     } catch {
-      // ignore audio failures
+      // Ignore audio failures.
     }
   }, []);
 
@@ -158,10 +158,12 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
       e.preventDefault();
     };
     const stopDrag = () => setDragging(false);
+
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('pointerup', stopDrag);
     window.addEventListener('touchend', stopDrag);
+
     return () => {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('touchmove', onTouchMove);
@@ -182,11 +184,13 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
 
   const togglePause = () => {
     if (finished) return;
+
     if (running) {
       setRunning(false);
       stopTick();
       return;
     }
+
     setRunning(true);
     startTick(remaining);
   };
@@ -204,7 +208,10 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   return (
     <>
       <div className="eyebrow">Workshop timer</div>
-      <div id="ring-wrap" ref={ringRef} style={{ animation: urgent ? 'pulse 1s ease-in-out infinite' : '', cursor: mode === 'set' ? 'crosshair' : 'default' }}
+      <div
+        id="ring-wrap"
+        ref={ringRef}
+        style={{ animation: urgent ? 'pulse 1s ease-in-out infinite' : '', cursor: mode === 'set' ? 'crosshair' : 'default' }}
         onPointerDown={(e) => {
           if (mode !== 'set' || !isOnRing(e)) return;
           setDragging(true);
@@ -216,7 +223,8 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
           setDragging(true);
           setSetMins(angleToMins(getAngle(e)));
           e.preventDefault();
-        }}>
+        }}
+      >
         <svg id="svg" width="300" height="300">
           <circle cx="150" cy="150" r="116" fill="none" stroke="#1E1E1E" strokeWidth="68" />
           <path id="arc" fill="none" strokeWidth="68" strokeLinecap="butt" d={arcPath(frac)} stroke={mode === 'set' ? '#FFFFFF' : arcColor(frac, finished)} opacity={finished ? '0.25' : '1'} />
@@ -224,9 +232,23 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
           {mode === 'set' && <circle id="handle" cx={CX + R * Math.sin((setMins / MAX_MIN) * 2 * Math.PI)} cy={CY - R * Math.cos((setMins / MAX_MIN) * 2 * Math.PI)} r="9" fill="#111111" stroke="#FFFFFF" strokeWidth="2.5" />}
           <rect x="148.5" y="-1" width="3" height="69" fill="#111111" />
         </svg>
+
         <div id="center" onClick={() => (mode === 'set' ? startTimer() : togglePause())}>
-          <div id="time-display" style={{ color: finished ? '#dc2626' : '#FFFFFF', animation: finished ? 'flash 1s ease-in-out infinite' : '' }}>{mode === 'set' ? `${pad(setMins)}:00` : fmt(remaining)}</div>
-          <div id="hint-pill" style={mode === 'set' ? { background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' } : finished ? { background: '#2A0A0A', borderColor: '#5A1A1A', color: '#dc2626' } : running ? { background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' } : { background: '#1E2A1E', borderColor: '#2A4A2A', color: '#15803d' }}>
+          <div id="time-display" style={{ color: finished ? '#dc2626' : '#FFFFFF', animation: finished ? 'flash 1s ease-in-out infinite' : '' }}>
+            {mode === 'set' ? `${pad(setMins)}:00` : fmt(remaining)}
+          </div>
+          <div
+            id="hint-pill"
+            style={
+              mode === 'set'
+                ? { background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' }
+                : finished
+                  ? { background: '#2A0A0A', borderColor: '#5A1A1A', color: '#dc2626' }
+                  : running
+                    ? { background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' }
+                    : { background: '#1E2A1E', borderColor: '#2A4A2A', color: '#15803d' }
+            }
+          >
             {mode === 'set' ? 'Dra for å stille' : finished ? 'Tid ute' : running ? 'Trykk for pause' : 'Pauset'}
           </div>
         </div>
@@ -244,6 +266,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
           </>
         )}
       </div>
+
       <div id="footer">{mode === 'set' ? '1 – 59 min' : ''}</div>
 
       <style jsx>{`
