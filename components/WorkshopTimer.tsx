@@ -51,6 +51,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   const [finished, setFinished] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [roomId, setRoomId] = useState<string | null>(null);
+  const [showQR, setShowQR] = useState(false);
 
   const ringRef = useRef<HTMLDivElement>(null);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -181,7 +182,11 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   }, [dragging, getAngle]);
 
   const startTimer = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const id = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const seconds = setMins * 60;
+    setRoomId(id);
+    setShowQR(false);
     setTotal(seconds);
     setRemaining(seconds);
     setFinished(false);
@@ -207,9 +212,9 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
     stopTick();
     setRunning(false);
     setFinished(false);
+    setShowQR(false);
     setMode('set');
   };
-
 
 
   useEffect(() => {
@@ -235,12 +240,6 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
     if (!roomId || typeof window === 'undefined') return '';
     return `${window.location.origin}/room/${roomId}`;
   }, [roomId]);
-
-  const createRoomId = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const id = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    setRoomId(id);
-  };
 
   const frac = useMemo(() => (mode === 'set' ? setMins / MAX_MIN : total > 0 ? remaining / total : 0), [mode, remaining, setMins, total]);
   const urgent = mode === 'run' && frac <= 0.1 && frac > 0 && running;
@@ -302,13 +301,13 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         ) : (
           <>
             <button className="btn ghost" onClick={backToSet}>← Endre tid</button>
-            <button className="btn ghost" onClick={createRoomId}>Del timer</button>
+            <button className="btn ghost" onClick={() => setShowQR((prev) => !prev)}>Del timer</button>
             <button className="btn primary" onClick={togglePause}>{running ? 'Pause' : 'Fortsett'}</button>
           </>
         )}
       </div>
 
-      {mode === 'run' && roomId && (
+      {mode === 'run' && roomId && showQR && (
         <div id="share-box">
           <div>Rom: <strong>{roomId}</strong></div>
           {shareUrl && <QRCodeSVG value={shareUrl} size={140} bgColor="#111111" fgColor="#FFFFFF" />}
