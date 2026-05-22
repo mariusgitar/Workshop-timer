@@ -16,6 +16,13 @@ const CX = 150;
 const CY = 150;
 const SIZE = 300;
 
+const STORAGE_KEY = 'workshop-timer-state';
+
+const generateRoomId = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+};
+
 const pad = (n: number) => String(n).padStart(2, '0');
 const fmt = (s: number) => `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
 
@@ -52,6 +59,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   const [dragging, setDragging] = useState(false);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   const ringRef = useRef<HTMLDivElement>(null);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -120,9 +128,63 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   }, [remaining]);
 
   useEffect(() => {
-    if (autoStart) startTick(seededMinutes * 60);
+    if (typeof window === 'undefined') return;
+
+    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      setHydrated(true);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as {
+        roomId?: string | null;
+        remaining?: number;
+        total?: number;
+        running?: boolean;
+        finished?: boolean;
+        endsAt?: number | null;
+      };
+
+      const nextTotal = typeof parsed.total === 'number' ? Math.max(0, Math.floor(parsed.total)) : seededMinutes * 60;
+      const nextRemaining = typeof parsed.remaining === 'number' ? Math.max(0, Math.floor(parsed.remaining)) : nextTotal;
+      const nextRunning = Boolean(parsed.running);
+      const nextFinished = Boolean(parsed.finished);
+
+      if (typeof parsed.roomId === 'string' && parsed.roomId) setRoomId(parsed.roomId);
+      setTotal(nextTotal);
+      setRemaining(nextRemaining);
+      setFinished(nextFinished);
+
+      const now = Date.now();
+      if (nextRunning && typeof parsed.endsAt === 'number' && parsed.endsAt > now) {
+        setMode('run');
+        setRunning(true);
+        const resumed = Math.max(0, Math.ceil((parsed.endsAt - now) / 1000));
+        setRemaining(resumed);
+        startTick(resumed);
+      } else {
+        setRunning(false);
+        if (nextTotal > 0) setMode('run');
+      }
+    } catch {
+      // Ignore invalid persisted state.
+    } finally {
+      setHydrated(true);
+    }
+
     return () => stopTick();
-  }, [autoStart, seededMinutes, startTick, stopTick]);
+  }, [seededMinutes, startTick, stopTick]);
+
+  useEffect(() => {
+    if (!hydrated || !autoStart || running || total > 0 && mode === 'run') return;
+    const seconds = seededMinutes * 60;
+    setTotal(seconds);
+    setRemaining(seconds);
+    setMode('run');
+    setRunning(true);
+    startTick(seconds);
+  }, [autoStart, hydrated, mode, running, seededMinutes, startTick, total]);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -182,8 +244,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   }, [dragging, getAngle]);
 
   const startTimer = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    const id = roomId ?? Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const id = roomId ?? generateRoomId();
     const seconds = setMins * 60;
     setRoomId(id);
     setShowQR(false);
@@ -215,6 +276,20 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
     setShowQR(false);
     setMode('set');
   };
+
+  useEffect(() => {
+    if (!hydrated || typeof window === 'undefined') return;
+    const payload = {
+      roomId,
+      remaining,
+      total,
+      running,
+      finished,
+      endsAt: endsAtRef.current
+    };
+    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }, [finished, hydrated, remaining, roomId, running, total]);
+
 
 
   // Immediate push on start, pause, resume, finish, or new timer total
@@ -305,11 +380,37 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         ) : (
           <>
             <button className="btn ghost" onClick={backToSet}>← Endre tid</button>
-            <button className="btn ghost" onClick={() => setShowQR((prev) => !prev)}>Del timer</button>
+            <button className="btn ghost" onClick={() => setShowQR((prev) => !prev)}>{showQR ? 'Skjul QR' : 'Vis QR'}</button>
             <button className="btn primary" onClick={togglePause}>{running ? 'Pause' : 'Fortsett'}</button>
           </>
         )}
       </div>
+
+
+      {mode === 'run' && roomId && (
+        <div id="room-meta">
+          <div className="room-pill">Rom aktiv: {roomId}</div>
+          <button
+            className="btn ghost subtle"
+            onClick={() => {
+              if (!window.confirm('Opprette nytt rom? Dette nullstiller aktiv timer.')) return;
+              stopTick();
+              window.sessionStorage.removeItem(STORAGE_KEY);
+              const id = generateRoomId();
+              setRoomId(id);
+              setMode('set');
+              setRunning(false);
+              setFinished(false);
+              setShowQR(false);
+              setTotal(0);
+              setRemaining(0);
+              endsAtRef.current = null;
+            }}
+          >
+            Nytt rom
+          </button>
+        </div>
+      )}
 
       {mode === 'run' && roomId && showQR && (
         <div id="share-box">
@@ -343,6 +444,9 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         .btn.primary:hover { background: #E8E8E8; }
         .btn.ghost { background: transparent; color: #555555; border: 1px solid #2A2A2A; }
         .btn.ghost:hover { border-color: #555555; color: #AAAAAA; }
+        #room-meta { margin-top: 12px; display: flex; gap: 8px; align-items: center; }
+        .room-pill { display: inline-flex; align-items: center; background: #1E1E1E; border: 1px solid #2A2A2A; border-radius: 100px; padding: 5px 12px; font-size: 11px; font-weight: 600; color: #888888; letter-spacing: 0.03em; }
+        .btn.ghost.subtle { padding: 6px 12px; font-size: 11px; }
         #share-box { margin-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: #AAAAAA; font-size: 13px; }
         #footer { margin-top: 20px; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: #2A2A2A; text-transform: uppercase; }
       `}</style>
