@@ -12,6 +12,13 @@ const pusher = new Pusher({
 export async function POST(req: Request) {
   const { roomId, remaining, total, running, finished } = await req.json();
 
+  console.log('Pusher config:', {
+    appId: process.env.PUSHER_APP_ID,
+    key: process.env.NEXT_PUBLIC_PUSHER_KEY,
+    secret: process.env.PUSHER_SECRET ? 'SET' : 'MISSING',
+    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER
+  });
+
   await pusher.trigger(`room-${roomId}`, 'timer-update', {
     remaining,
     total,
