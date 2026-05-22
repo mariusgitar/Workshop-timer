@@ -55,6 +55,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   const ringRef = useRef<HTMLDivElement>(null);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const endsAtRef = useRef<number | null>(null);
+  const runningRef = useRef(running);
 
   const stopTick = useCallback(() => {
     if (tickerRef.current) {
@@ -88,19 +89,16 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   }, []);
 
   const tick = useCallback(() => {
-    setRemaining((prev) => {
-      if (!running || !endsAtRef.current) return prev;
-      const left = Math.max(0, Math.ceil((endsAtRef.current - Date.now()) / 1000));
-      if (left <= 0) {
-        stopTick();
-        setRunning(false);
-        setFinished(true);
-        playDone();
-        return 0;
-      }
-      return left;
-    });
-  }, [playDone, running, stopTick]);
+    if (!runningRef.current || !endsAtRef.current) return;
+    const left = Math.max(0, Math.ceil((endsAtRef.current - Date.now()) / 1000));
+    setRemaining(left);
+    if (left <= 0) {
+      stopTick();
+      setRunning(false);
+      setFinished(true);
+      playDone();
+    }
+  }, [playDone, stopTick]);
 
   const startTick = useCallback(
     (seconds: number) => {
@@ -108,8 +106,12 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
       endsAtRef.current = Date.now() + seconds * 1000;
       tickerRef.current = setInterval(tick, 1000);
     },
-    [stopTick, tick]
+    [stopTick]
   );
+
+  useEffect(() => {
+    runningRef.current = running;
+  }, [running]);
 
   useEffect(() => {
     if (autoStart) startTick(seededMinutes * 60);
