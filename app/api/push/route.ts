@@ -1,23 +1,25 @@
 import { NextResponse } from 'next/server';
 import Pusher from 'pusher';
 
-const pusher = new Pusher({
-  appId: process.env.PUSHER_APP_ID ?? '',
-  key: process.env.NEXT_PUBLIC_PUSHER_KEY ?? '',
-  secret: process.env.PUSHER_SECRET ?? '',
-  cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? '',
-  useTLS: true
-});
-
 export async function POST(req: Request) {
   const { roomId, remaining, total, running, finished } = await req.json();
 
-  console.log('Pusher config:', {
-    appId: process.env.PUSHER_APP_ID,
-    key: process.env.NEXT_PUBLIC_PUSHER_KEY,
-    secret: process.env.PUSHER_SECRET ? 'SET' : 'MISSING',
-    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER
-  });
+  const appId = process.env.PUSHER_APP_ID ?? '';
+  const key = process.env.NEXT_PUBLIC_PUSHER_KEY ?? '';
+  const secret = process.env.PUSHER_SECRET ?? '';
+  const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER ?? '';
+
+  if (!appId || !key || !secret || !cluster) {
+    console.error('Pusher env incomplete:', {
+      PUSHER_APP_ID: appId ? 'set' : 'MISSING',
+      NEXT_PUBLIC_PUSHER_KEY: key ? 'set' : 'MISSING',
+      PUSHER_SECRET: secret ? 'set' : 'MISSING',
+      NEXT_PUBLIC_PUSHER_CLUSTER: cluster ? 'set' : 'MISSING',
+    });
+    return NextResponse.json({ ok: false, error: 'Pusher config incomplete' }, { status: 500 });
+  }
+
+  const pusher = new Pusher({ appId, key, secret, cluster, useTLS: true });
 
   try {
     await pusher.trigger(`room-${roomId}`, 'timer-update', {
@@ -26,7 +28,7 @@ export async function POST(req: Request) {
       running,
       finished
     });
-    console.log('Pusher trigger success for room:', roomId);
+    console.log(`Pusher trigger success — appId:${appId} cluster:${cluster} channel:room-${roomId}`);
   } catch (error) {
     console.error('Pusher trigger error:', error);
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
