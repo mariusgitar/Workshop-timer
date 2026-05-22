@@ -90,8 +90,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   const tick = useCallback(() => {
     setRemaining((prev) => {
       if (!running || !endsAtRef.current) return prev;
-      const left = Math.max(0, Math.round((endsAtRef.current - Date.now()) / 1000));
-      if (left === prev) return prev;
+      const left = Math.max(0, Math.ceil((endsAtRef.current - Date.now()) / 1000));
       if (left <= 0) {
         stopTick();
         setRunning(false);
@@ -107,7 +106,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
     (seconds: number) => {
       stopTick();
       endsAtRef.current = Date.now() + seconds * 1000;
-      tickerRef.current = setInterval(tick, 250);
+      tickerRef.current = setInterval(tick, 1000);
     },
     [stopTick, tick]
   );
