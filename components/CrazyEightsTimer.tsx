@@ -52,8 +52,12 @@ const arcColor = (frac: number, fin: boolean) => {
   return '#dc2626';
 };
 
-export default function CrazyEightsTimer() {
-  const [roomId, setRoomId] = useState<string | null>(null);
+type CrazyEightsTimerProps = {
+  initialRoomId?: string | null;
+};
+
+export default function CrazyEightsTimer({ initialRoomId = null }: CrazyEightsTimerProps) {
+  const [roomId, setRoomId] = useState<string | null>(initialRoomId);
   const [showQR, setShowQR] = useState(false);
   const [round, setRound] = useState(1);
   const [remaining, setRemaining] = useState(ROUND_SECONDS);
@@ -64,6 +68,10 @@ export default function CrazyEightsTimer() {
   const [pauseRemaining, setPauseRemaining] = useState(0);
   const [flash, setFlash] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (initialRoomId) setShowQR(true);
+  }, [initialRoomId]);
 
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const endsAtRef = useRef<number | null>(null);

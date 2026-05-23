@@ -439,7 +439,9 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
       <button
         id="crazy-eights-link"
         onClick={() => {
-          window.location.href = '/crazy-eights';
+          window.location.href = roomId
+            ? `/crazy-eights?room=${roomId}`
+            : '/crazy-eights';
         }}
       >
         Prøv Crazy Eights →
