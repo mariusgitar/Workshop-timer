@@ -363,66 +363,27 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
           <div id="time-display" style={{ color: finished ? '#dc2626' : '#FFFFFF', animation: finished ? 'flash 1s ease-in-out infinite' : '' }}>
             {mode === 'set' ? `${pad(setMins)}:00` : fmt(remaining)}
           </div>
-          <div
-            id="hint-pill"
-            style={
-              mode === 'set'
-                ? { background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' }
-                : finished
-                  ? { background: '#2A0A0A', borderColor: '#5A1A1A', color: '#dc2626' }
-                  : running
-                    ? { background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' }
-                    : { background: '#1E2A1E', borderColor: '#2A4A2A', color: '#15803d' }
-            }
-          >
-            {mode === 'set' ? 'Dra for å stille' : finished ? 'Tid ute' : running ? 'Trykk for pause' : 'Pauset'}
-          </div>
+          <div id="hint-text">{mode === 'set' ? 'Trykk for start' : running ? 'Trykk for pause' : 'Trykk for start'}</div>
         </div>
       </div>
 
+      {mode === 'set' && <div id="drag-hint">Dra ringen for å stille tid</div>}
+
       <div id="controls">
-        {mode === 'set' ? (
-          <button className="btn primary" onClick={startTimer}>Start</button>
-        ) : finished ? (
-          <button className="btn primary" onClick={backToSet}>Ny runde</button>
-        ) : (
-          <>
-            <button className="btn ghost" onClick={backToSet}>← Endre tid</button>
-            <button className="btn ghost" onClick={() => setShowQR((prev) => !prev)}>{showQR ? 'Skjul QR' : 'Vis QR'}</button>
-            <button className="btn primary" onClick={togglePause}>{running ? 'Pause' : 'Fortsett'}</button>
-          </>
-        )}
+        {mode !== 'set' && <button className="btn ghost" onClick={backToSet}>← Endre tid</button>}
+        <button className="btn ghost" onClick={() => setShowQR((prev) => !prev)}>{showQR ? 'Skjul QR' : 'Vis QR'}</button>
       </div>
 
 
-      {mode === 'run' && roomId && (
+      {roomId && (
         <div id="room-meta">
-          <div className="room-pill">Rom aktiv: {roomId}</div>
-          <button
-            className="btn ghost subtle"
-            onClick={() => {
-              if (!window.confirm('Opprette nytt rom? Dette nullstiller aktiv timer.')) return;
-              stopTick();
-              window.sessionStorage.removeItem(STORAGE_KEY);
-              const id = generateRoomId();
-              setRoomId(id);
-              setMode('set');
-              setRunning(false);
-              setFinished(false);
-              setShowQR(false);
-              setTotal(0);
-              setRemaining(0);
-              endsAtRef.current = null;
-            }}
-          >
-            Nytt rom
-          </button>
+          <span className="room-label">Rom: </span>
+          <span className="room-id">{roomId}</span>
         </div>
       )}
 
-      {mode === 'run' && roomId && showQR && (
+      {roomId && showQR && (
         <div id="share-box">
-          <div>Rom: <strong>{roomId}</strong></div>
           {shareUrl && <QRCodeSVG value={shareUrl} size={140} bgColor="#111111" fgColor="#FFFFFF" />}
           {shareUrl && (
             <a
@@ -437,6 +398,26 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         </div>
       )}
 
+      <button
+        id="new-room-link"
+        onClick={() => {
+          if (!window.confirm('Opprette nytt rom? Dette nullstiller aktiv timer.')) return;
+          stopTick();
+          window.sessionStorage.removeItem(STORAGE_KEY);
+          const id = generateRoomId();
+          setRoomId(id);
+          setMode('set');
+          setRunning(false);
+          setFinished(false);
+          setShowQR(false);
+          setTotal(0);
+          setRemaining(0);
+          endsAtRef.current = null;
+        }}
+      >
+        Nytt rom
+      </button>
+
       <div id="footer">{mode === 'set' ? '1 – 59 min' : ''}</div>
 
       <style jsx>{`
@@ -445,17 +426,16 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         #ring-wrap svg { display: block; pointer-events: none; }
         #center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
         #time-display { font-size: 58px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color 0.4s; }
-        #hint-pill { display: inline-flex; align-items: center; background: #1E1E1E; border: 1px solid #2A2A2A; border-radius: 100px; padding: 5px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; transition: all 0.2s; }
-        #controls { margin-top: 36px; display: flex; gap: 10px; align-items: center; }
-        .btn { border-radius: 100px; padding: 10px 26px; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; border: none; letter-spacing: 0.01em; }
-        .btn.primary { background: #FFFFFF; color: #111111; }
-        .btn.primary:hover { background: #E8E8E8; }
-        .btn.ghost { background: transparent; color: #555555; border: 1px solid #2A2A2A; }
-        .btn.ghost:hover { border-color: #555555; color: #AAAAAA; }
-        #room-meta { margin-top: 12px; display: flex; gap: 8px; align-items: center; }
-        .room-pill { display: inline-flex; align-items: center; background: #1E1E1E; border: 1px solid #2A2A2A; border-radius: 100px; padding: 5px 12px; font-size: 11px; font-weight: 600; color: #888888; letter-spacing: 0.03em; }
-        .btn.ghost.subtle { padding: 6px 12px; font-size: 11px; }
-        #share-box { margin-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: #AAAAAA; font-size: 13px; }
+        #hint-text { font-size: 11px; font-weight: 600; color: #555555; letter-spacing: 0.02em; }
+        #drag-hint { margin-top: 8px; font-size: 11px; color: #2e2e2e; }
+        #controls { margin-top: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; }
+        .btn { border-radius: 100px; padding: 8px 0; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; border: none; background: transparent; color: #555555; letter-spacing: 0.01em; }
+        .btn.ghost:hover { color: #AAAAAA; }
+        #room-meta { margin-top: 12px; display: flex; gap: 0; align-items: center; font-size: 12px; }
+        .room-label { color: #333333; }
+        .room-id { color: #555555; font-weight: 600; }
+        #share-box { margin-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: #AAAAAA; font-size: 13px; }
+        #new-room-link { margin-top: 22px; font-size: 11px; color: #2a2a2a; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: pointer; }
         #footer { margin-top: 20px; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: #2A2A2A; text-transform: uppercase; }
       `}</style>
     </>
