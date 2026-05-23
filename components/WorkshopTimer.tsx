@@ -10,7 +10,6 @@ type WorkshopTimerProps = {
   autoStart?: boolean;
 };
 
-const MAX_MIN = 59;
 const R = 116;
 const CX = 150;
 const CY = 150;
@@ -42,15 +41,11 @@ const arcColor = (frac: number, fin: boolean) => {
   return '#dc2626';
 };
 
-const angleToMins = (angle: number) => {
-  let deg = (angle * 180) / Math.PI;
-  if (deg < 0) deg += 360;
-  return Math.max(1, Math.min(MAX_MIN, Math.round((deg / 360) * MAX_MIN)));
-};
 
 export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }: WorkshopTimerProps) {
-  const seededMinutes = Math.max(1, Math.min(MAX_MIN, Math.floor(initialMinutes)));
+  const seededMinutes = Math.max(1, Math.min(59, Math.floor(initialMinutes)));
   const [mode, setMode] = useState<Mode>(autoStart ? 'run' : 'set');
+  const [scale, setScale] = useState<'short' | 'standard' | 'long'>('standard');
   const [setMins, setSetMins] = useState(seededMinutes);
   const [total, setTotal] = useState(seededMinutes * 60);
   const [remaining, setRemaining] = useState(seededMinutes * 60);
@@ -60,6 +55,20 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   const [roomId, setRoomId] = useState<string | null>(null);
   const [showQR, setShowQR] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+
+
+  const getMaxMin = useCallback(() => (scale === 'short' ? 30 : scale === 'long' ? 240 : 59), [scale]);
+  const getSnapMin = useCallback(() => (scale === 'short' ? 0.5 : scale === 'long' ? 5 : 1), [scale]);
+
+  const angleToMins = useCallback((angle: number) => {
+    let deg = (angle * 180) / Math.PI;
+    if (deg < 0) deg += 360;
+    const maxMin = getMaxMin();
+    const snapMin = getSnapMin();
+    const raw = (deg / 360) * maxMin;
+    const snapped = Math.round(raw / snapMin) * snapMin;
+    return Math.max(1, Math.min(maxMin, snapped));
+  }, [getMaxMin, getSnapMin]);
 
   const ringRef = useRef<HTMLDivElement>(null);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -328,7 +337,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
     return `${window.location.origin}/room/${roomId}`;
   }, [roomId]);
 
-  const frac = useMemo(() => (mode === 'set' ? setMins / MAX_MIN : total > 0 ? remaining / total : 0), [mode, remaining, setMins, total]);
+  const frac = useMemo(() => (mode === 'set' ? setMins / getMaxMin() : total > 0 ? remaining / total : 0), [getMaxMin, mode, remaining, setMins, total]);
   const urgent = mode === 'run' && frac <= 0.1 && frac > 0 && running;
 
   return (
@@ -355,19 +364,28 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
           <circle cx="150" cy="150" r="116" fill="none" stroke="#1E1E1E" strokeWidth="68" />
           <path id="arc" fill="none" strokeWidth="68" strokeLinecap="butt" d={arcPath(frac)} stroke={mode === 'set' ? '#FFFFFF' : arcColor(frac, finished)} opacity={finished ? '0.25' : '1'} />
           <circle cx="150" cy="150" r="92" fill="#111111" />
-          {mode === 'set' && <circle id="handle" cx={CX + R * Math.sin((setMins / MAX_MIN) * 2 * Math.PI)} cy={CY - R * Math.cos((setMins / MAX_MIN) * 2 * Math.PI)} r="9" fill="#111111" stroke="#FFFFFF" strokeWidth="2.5" />}
+          {mode === 'set' && <circle id="handle" cx={CX + R * Math.sin((setMins / getMaxMin()) * 2 * Math.PI)} cy={CY - R * Math.cos((setMins / getMaxMin()) * 2 * Math.PI)} r="9" fill="#111111" stroke="#FFFFFF" strokeWidth="2.5" />}
           <rect x="148.5" y="-1" width="3" height="69" fill="#111111" />
         </svg>
 
         <div id="center" onClick={() => (mode === 'set' ? startTimer() : togglePause())}>
           <div id="time-display" style={{ color: finished ? '#dc2626' : '#FFFFFF', animation: finished ? 'flash 1s ease-in-out infinite' : '' }}>
-            {mode === 'set' ? `${pad(setMins)}:00` : fmt(remaining)}
+            {mode === 'set' ? fmt(Math.round(setMins * 60)) : fmt(remaining)}
           </div>
           <div id="hint-text">{mode === 'set' ? 'Trykk for start' : running ? 'Trykk for pause' : 'Trykk for start'}</div>
         </div>
       </div>
 
-      {mode === 'set' && <div id="drag-hint">Dra ringen for å stille tid</div>}
+      {mode === 'set' && (
+        <>
+          <div id="drag-hint">Dra ringen for å stille tid</div>
+          <div id="scale-picker">
+            <button className={`scale-btn ${scale === 'short' ? 'active' : ''}`} onClick={() => { setScale('short'); setSetMins(1); }}>30m</button>
+            <button className={`scale-btn ${scale === 'standard' ? 'active' : ''}`} onClick={() => { setScale('standard'); setSetMins(1); }}>1t</button>
+            <button className={`scale-btn ${scale === 'long' ? 'active' : ''}`} onClick={() => { setScale('long'); setSetMins(5); }}>4t</button>
+          </div>
+        </>
+      )}
 
       <div id="controls">
         {mode !== 'set' && <button className="btn ghost" onClick={backToSet}>← Endre tid</button>}
@@ -418,7 +436,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         Nytt rom
       </button>
 
-      <div id="footer">{mode === 'set' ? '1 – 59 min' : ''}</div>
+      <div id="footer">{mode === 'set' ? `1 – ${getMaxMin()} min` : ''}</div>
 
       <style jsx>{`
         .eyebrow { font-size: 22px; font-weight: 700; letter-spacing: 0em; text-transform: none; color: #FFFFFF; margin-bottom: 48px; }
@@ -428,6 +446,9 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         #time-display { font-size: 58px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color 0.4s; }
         #hint-text { font-size: 11px; font-weight: 600; color: #555555; letter-spacing: 0.02em; }
         #drag-hint { margin-top: 8px; font-size: 11px; color: #2e2e2e; }
+        #scale-picker { margin-top: 8px; display: flex; gap: 6px; }
+        .scale-btn { background: transparent; color: #333333; border: 1px solid #333333; border-radius: 100px; padding: 5px 12px; font-size: 11px; cursor: pointer; font-family: inherit; }
+        .scale-btn.active { background: #333333; color: #ffffff; }
         #controls { margin-top: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; }
         .btn { border-radius: 100px; padding: 8px 0; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; border: none; background: transparent; color: #555555; letter-spacing: 0.01em; }
         .btn.ghost { border: 1px solid #2A2A2A; border-radius: 100px; padding: 9px 18px; font-size: 12px; font-weight: 600; color: #666666; background: transparent; cursor: pointer; font-family: inherit; }
