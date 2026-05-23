@@ -430,6 +430,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         #drag-hint { margin-top: 8px; font-size: 11px; color: #2e2e2e; }
         #controls { margin-top: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; }
         .btn { border-radius: 100px; padding: 8px 0; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.15s; border: none; background: transparent; color: #555555; letter-spacing: 0.01em; }
+        .btn.ghost { border: 1px solid #2A2A2A; border-radius: 100px; padding: 9px 18px; font-size: 12px; font-weight: 600; color: #666666; background: transparent; cursor: pointer; font-family: inherit; }
         .btn.ghost:hover { color: #AAAAAA; }
         #room-meta { margin-top: 12px; display: flex; gap: 0; align-items: center; font-size: 12px; }
         .room-label { color: #333333; }
