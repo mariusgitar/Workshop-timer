@@ -436,7 +436,14 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         Nytt rom
       </button>
 
-      <div id="footer">{mode === 'set' ? `1 – ${getMaxMin()} min` : ''}</div>
+      <button
+        id="crazy-eights-link"
+        onClick={() => {
+          window.location.href = '/crazy-eights';
+        }}
+      >
+        Prøv Crazy Eights →
+      </button>
 
       <style jsx>{`
         .eyebrow { font-size: 22px; font-weight: 700; letter-spacing: 0em; text-transform: none; color: #FFFFFF; margin-bottom: 48px; }
@@ -458,7 +465,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         .room-id { color: #555555; font-weight: 600; }
         #share-box { margin-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: #AAAAAA; font-size: 13px; }
         #new-room-link { margin-top: 22px; font-size: 11px; color: #2a2a2a; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: pointer; }
-        #footer { margin-top: 20px; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; color: #2A2A2A; text-transform: uppercase; }
+        #crazy-eights-link { margin-top: 8px; font-size: 11px; color: #2a2a2a; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: pointer; }
       `}</style>
     </>
   );
