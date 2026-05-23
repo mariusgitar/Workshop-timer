@@ -35,6 +35,8 @@ export default function RoomPage({ params }: RoomPageProps) {
   const [total, setTotal] = useState(0);
   const [running, setRunning] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [mode, setMode] = useState<'timer' | 'crazy-eights'>('timer');
+  const [round, setRound] = useState<number>(1);
   const wasFinishedRef = useRef(false);
   const endsAt = useRef<number | null>(null);
   const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -46,11 +48,13 @@ export default function RoomPage({ params }: RoomPageProps) {
 
     const channel = pusher.subscribe(`room-${params.id}`);
     channel.bind('pusher:subscription_succeeded', () => {
-      channel.bind('timer-update', (data: { remaining: number; total: number; running: boolean; finished: boolean }) => {
+      channel.bind('timer-update', (data: { remaining: number; total: number; running: boolean; finished: boolean; mode?: 'timer' | 'crazy-eights'; round?: number }) => {
         setRemaining(data.remaining);
         setTotal(data.total);
         setRunning(data.running);
         setFinished(data.finished);
+        setMode(data.mode ?? 'timer');
+        setRound(data.round ?? 1);
 
         if (data.running) {
           endsAt.current = Date.now() + data.remaining * 1000;
@@ -161,12 +165,26 @@ export default function RoomPage({ params }: RoomPageProps) {
           </svg>
 
           <div id="center">
-            <div id="time-display" style={{ color: finished ? '#dc2626' : '#FFFFFF', animation: finished ? 'flash 1s ease-in-out infinite' : '' }}>
-              {fmt(remaining)}
-            </div>
-            <div id="hint-pill" style={{ background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' }}>
-              {finished ? 'Tid ute' : running ? 'Kjører' : 'Pauset'}
-            </div>
+            {mode === 'crazy-eights' ? (
+              <>
+                <div id="round-display">Runde {round} av 8</div>
+                <div id="time-display" style={{ color: finished ? '#dc2626' : '#FFFFFF', animation: finished ? 'flash 1s ease-in-out infinite' : '' }}>
+                  {remaining}
+                </div>
+                <div id="hint-pill" style={{ background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' }}>
+                  {running ? 'Kjører' : 'Pause mellom runder'}
+                </div>
+              </>
+            ) : (
+              <>
+                <div id="time-display" style={{ color: finished ? '#dc2626' : '#FFFFFF', animation: finished ? 'flash 1s ease-in-out infinite' : '' }}>
+                  {fmt(remaining)}
+                </div>
+                <div id="hint-pill" style={{ background: '#1E1E1E', borderColor: '#2A2A2A', color: '#555555' }}>
+                  {finished ? 'Tid ute' : running ? 'Kjører' : 'Pauset'}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -176,6 +194,7 @@ export default function RoomPage({ params }: RoomPageProps) {
         #ring-wrap, #idle-state { position: relative; width: 300px; height: 300px; }
         #ring-wrap svg { display: block; pointer-events: none; }
         #center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: default; }
+        #round-display { font-size: 16px; font-weight: 700; line-height: 1.2; color: #FFFFFF; text-align: center; }
         #time-display { font-size: 58px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color 0.4s; text-align: center; padding: 0 12px; }
         #hint-pill { display: inline-flex; align-items: center; background: #1E1E1E; border: 1px solid #2A2A2A; border-radius: 100px; padding: 5px 14px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; transition: all 0.2s; }
         #idle-state { display: flex; align-items: center; justify-content: center; }
