@@ -137,6 +137,10 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   }, [remaining]);
 
   useEffect(() => {
+    setRoomId((prev) => prev ?? generateRoomId());
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
@@ -253,9 +257,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
   }, [dragging, getAngle]);
 
   const startTimer = () => {
-    const id = roomId ?? generateRoomId();
     const seconds = setMins * 60;
-    setRoomId(id);
     setShowQR(false);
     setTotal(seconds);
     setRemaining(seconds);
@@ -400,7 +402,7 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         </div>
       )}
 
-      {roomId && showQR && (
+      {showQR && roomId && (
         <div id="share-box">
           {shareUrl && <QRCodeSVG value={shareUrl} size={140} bgColor="#111111" fgColor="#FFFFFF" />}
           {shareUrl && (
