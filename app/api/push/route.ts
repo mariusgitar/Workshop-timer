@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Pusher from 'pusher';
 
 export async function POST(req: Request) {
-  const { roomId, remaining, total, running, finished, mode, round } = await req.json();
+  const { roomId, remaining, total, running, finished, mode, round, endsAt } = await req.json();
 
   const appId = process.env.PUSHER_APP_ID ?? '';
   const key = process.env.NEXT_PUBLIC_PUSHER_KEY ?? '';
@@ -28,7 +28,8 @@ export async function POST(req: Request) {
       running,
       finished,
       mode: mode ?? 'timer',
-      round: round ?? null
+      round: round ?? null,
+      endsAt: typeof endsAt === 'number' ? endsAt : null
     });
     console.log(`Pusher trigger success — appId:${appId} cluster:${cluster} channel:room-${roomId}`);
   } catch (error) {
