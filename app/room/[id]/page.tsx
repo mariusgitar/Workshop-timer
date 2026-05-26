@@ -48,7 +48,7 @@ export default function RoomPage({ params }: RoomPageProps) {
 
     const channel = pusher.subscribe(`room-${params.id}`);
     channel.bind('pusher:subscription_succeeded', () => {
-      channel.bind('timer-update', (data: { remaining: number; total: number; running: boolean; finished: boolean; mode?: 'timer' | 'crazy-eights'; round?: number }) => {
+      channel.bind('timer-update', (data: { remaining: number; total: number; running: boolean; finished: boolean; mode?: 'timer' | 'crazy-eights'; round?: number; endsAt?: number | null }) => {
         setRemaining(data.remaining);
         setTotal(data.total);
         setRunning(data.running);
@@ -57,7 +57,7 @@ export default function RoomPage({ params }: RoomPageProps) {
         setRound(data.round ?? 1);
 
         if (data.running) {
-          endsAt.current = Date.now() + data.remaining * 1000;
+          endsAt.current = typeof data.endsAt === 'number' ? data.endsAt : Date.now() + data.remaining * 1000;
         } else {
           endsAt.current = null;
         }

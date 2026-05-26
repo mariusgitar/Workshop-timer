@@ -28,6 +28,17 @@ type PersistedState = {
   endsAt?: number | null;
 };
 
+type PushPayload = {
+  roomId: string;
+  mode: 'crazy-eights';
+  round: number;
+  remaining: number;
+  total: number;
+  running: boolean;
+  finished: boolean;
+  endsAt: number | null;
+};
+
 const generateRoomId = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -270,8 +281,9 @@ export default function CrazyEightsTimer({ initialRoomId = null }: CrazyEightsTi
           remaining,
           total,
           running,
-          finished
-        })
+          finished,
+          endsAt: endsAtRef.current
+        } satisfies PushPayload)
       });
     };
     push();
