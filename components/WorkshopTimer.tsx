@@ -468,8 +468,8 @@ export default function WorkshopTimer({ initialMinutes = 5, autoStart = false }:
         .room-label { color: #333333; }
         .room-id { color: #555555; font-weight: 600; }
         #share-box { margin-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 10px; color: #AAAAAA; font-size: 13px; }
-        #new-room-link { margin-top: 22px; font-size: 11px; color: #2a2a2a; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: pointer; }
-        #crazy-eights-link { margin-top: 8px; font-size: 11px; color: #2a2a2a; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: pointer; }
+        #new-room-link { margin-top: 22px; font-size: 11px; color: #444444; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: pointer; }
+        #crazy-eights-link { margin-top: 8px; font-size: 11px; color: #444444; text-decoration: underline; background: transparent; border: none; padding: 0; cursor: pointer; }
       `}</style>
     </>
   );
