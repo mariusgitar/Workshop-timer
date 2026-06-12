@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -17,6 +18,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="no">
       <head>
         <meta name="theme-color" content="#111111" />
+        <Script
+          defer
+          src="https://umami-analytics-seven-zeta.vercel.app/script.js"
+          data-website-id="4320d621-9141-479a-9d34-1f25eb97f060"
+          strategy="afterInteractive"
+        />
       </head>
       <body className={plusJakartaSans.className}>{children}</body>
     </html>
